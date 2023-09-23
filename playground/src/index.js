@@ -1,15 +1,15 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+const rootNode = document.getElementById('root');
 const render = Component => {
-    ReactDOM.render(
+    ReactDOM.createRoot(rootNode).render(
       <React.StrictMode>
         <Component />
-      </React.StrictMode>,
-      document.getElementById('root'),
+      </React.StrictMode>
     );
 };
 
@@ -18,7 +18,6 @@ render(App);
 if(module.hot){
   module.hot.accept('./App', () => {
     render(App);
-
     render(require('./App'));
   });
 }
