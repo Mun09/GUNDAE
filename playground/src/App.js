@@ -11,9 +11,9 @@ const App = () => {
       <div id="canvas-container">
         <Canvas
           shadows
+          camera={{position: [15, 9, 9], fov: 30 }}
         >
           <MainContainer />
-
           <OrbitControls />
         </Canvas>
       </div>
