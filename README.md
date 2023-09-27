@@ -5,6 +5,4 @@ In Gundae, what can I do?
 오랜만에 시작하는 새로운 react\n
 npm start
 
-목적은 단 하나,
-
-1분 이상 머물게 하자
+사용자가 사이트에 1분 이상 머물게 하자

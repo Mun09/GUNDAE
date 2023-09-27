@@ -1,37 +1,63 @@
-import { Suspense } from "react";
+import * as THREE from 'three';
+import { Suspense, useEffect, useRef, useState } from "react";
 import Earth from "./Earth";
-import { Perf } from "r3f-perf";
-import { BallCollider, Physics, RigidBody } from "@react-three/rapier";
+import { Physics, useSphere} from "@react-three/cannon";
 import { Sphere, Box } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+
 
 const MainContainer = () => {
+
+    const [gravity, setGravity] = useState([0, -9.8, 0]);
+
     return (
         <>
-            {/* <Perf /> */}
-
             <ambientLight intensity={0.1} />
             <directionalLight position={[10, -10, 0]} intensity={0.5}/>
 
             <Suspense>
-                <Physics debug gravity={[0,-3,0]}>
-                    <RigidBody position={[1, 6, 1]} gravityScale={4}>
-                        <BallCollider args={[3]} />
-                        <Sphere position-y={0}>
-                            <meshStandardMaterial color={"red"} />
-                        </Sphere>
+                <Physics debug gravity={gravity}>
 
-                    </RigidBody>
-
-                    
-
-                    <RigidBody type="fixed" restitution={2}>
-                        <Box position={[0,0,0]} args={[10, 1, 10]}>
-                            <meshStandardMaterial color={"springgreen"}></meshStandardMaterial>
-                        </Box>
-                    </RigidBody>
-                    
+                <RotatingSphere setGravity={setGravity} />
                 </Physics>
             </Suspense>
+        </>
+    )
+}
+
+const RotatingSphere = (props) => {
+    const ballinitpos = [5, 5, 5];
+    const pos = useRef(new THREE.Vector3(ballinitpos[0], ballinitpos[1], ballinitpos[2]));
+
+    const [ballRef, api] = useSphere(() => ({
+        args: [1, 32, 32],
+        position: ballinitpos,
+        mass: 1
+    }));
+
+    useEffect(() => {
+        api.position.subscribe((v) => {return (pos.current = new THREE.Vector3(v[0], v[1], v[2]))});
+
+        let sumup = 0;
+        
+        pos.current.forEach(a => {
+            sumup += a;
+        });
+        console.log(pos/sumup);
+        props.setGravity(pos/sumup);
+    }, [ballRef]);
+
+    useFrame(()=>{
+        // console.log(pos);
+        // accofgravity = pos;
+    })
+
+    return (
+        <>
+            <mesh ref={ballRef}>
+                <sphereGeometry args={[1, 32, 32]} />
+                <meshStandardMaterial color={"blue"} />
+            </mesh>
         </>
     )
 }
