@@ -6,19 +6,25 @@ import { Sphere, Box } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 
 
-const MainContainer = () => {
+const MainContainer = (props) => {
 
     const [gravity, setGravity] = useState([0, -9.8, 0]);
+    const { Spec, ChangingSpec } = props;
 
     return (
         <>
-            <ambientLight intensity={0.1} />
-            <directionalLight position={[10, -10, 0]} intensity={0.5}/>
+            <ambientLight intensity={1} />
+            <directionalLight position={[0, 0, 10]} intensity={0.5}/>
 
             <Suspense>
                 <Physics debug gravity={gravity}>
                 <FixedSphere />
-                <RotatingSphere setGravity={setGravity} />
+                <RotatingSphere 
+                    setGravity={setGravity} 
+                    trailLength={props.trailLength} 
+                    Spec={Spec} 
+                    ChangingSpec={ChangingSpec}
+                />
                 </Physics>
             </Suspense>
             
@@ -39,7 +45,11 @@ const FixedSphere = () => {
         <>
             <mesh ref={ballRef} >
                 <sphereGeometry args={[4,32,32]}/>
-                <meshStandardMaterial color={"red"} />
+                <meshStandardMaterial 
+                    color={"red"} 
+                    emissive={"yellow"}
+                    emissiveIntensity={0.5}
+                />
             </mesh>
         </>
     )
@@ -47,29 +57,44 @@ const FixedSphere = () => {
 }
 
 const RotatingSphere = (props) => {
-    const ballinitpos = [5, 5, 5];
-    const pos = useRef(new THREE.Vector3(ballinitpos[0], ballinitpos[1], ballinitpos[2]));
-    const trailRef = useRef(new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x00ff00 })));
-    const trailPoints = useRef([]);
+    const {trailLength, Spec, ChangingSpec} = props;
+    const ballinitpos = Spec.position;
+    const initvelocity = Spec.velocity;
 
-    const [ballRef, api] = useSphere(() => ({
-        args: [1, 32, 32],
-        position: ballinitpos,
-        mass: 100,
-        velocity: [-7,3,4]
-    }));
+    const pos = useRef(new THREE.Vector3(ballinitpos[0], ballinitpos[1], ballinitpos[2]));
+    const vel = useRef(new THREE.Vector3(initvelocity[0], initvelocity[1], initvelocity[2]));
+
+    const trailRef = useRef(new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x00ff00 })));
+    const [trailPoints, settrailPoints] = useState([]);
+
+
+    const [ballRef, api] = useSphere(() => (Spec));
 
     useEffect(() => {
         api.position.subscribe((v) => {return (pos.current = new THREE.Vector3(v[0], v[1], v[2]))});
-    }, [ballRef, props]);
+        api.velocity.subscribe((v) => {vel.current = new THREE.Vector3(v[0], v[1], v[2])});
+    }, [ballRef, props, api]);
+
+    useEffect(()=>{
+        const {sizeofvelocity} = ChangingSpec;
+        
+        console.log(vel);
+        const ratio = sizeofvelocity / vel.current.length();
+        api.velocity.set(vel.current.x * ratio, vel.current.y * ratio, vel.current.z * ratio);
+    }, [ChangingSpec])
 
     useEffect(() => {
-        
+            settrailPoints(
+                trailPoints.length >= trailLength
+                ? trailPoints.filter((_, index) => index >= 3)
+                : [...trailPoints, pos.current.x, pos.current.y, pos.current.z]
+            );
+            
             const trailMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
             const trailGeometry = new THREE.BufferGeometry();
     
             // 궤적을 그리기 위한 버퍼 속성을 생성합니다.
-            const positions = new Float32Array(100 * 3); // 100개의 포인트를 저장할 버퍼
+            const positions = new Float32Array(trailPoints); // 100개의 포인트를 저장할 버퍼
             trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     
             // 궤적 라인을 생성합니다.
@@ -81,33 +106,11 @@ const RotatingSphere = (props) => {
     
             // 실제로 Three.js 객체를 렌더링하기 위해 scene에 추가합니다.
             api.trail = trailLine;
-
-        console.log(trailLine);
-        
-    }, [trailRef]);
-
-    
+    }, [trailRef, trailPoints, trailLength, api]);
 
     useFrame(()=>{
         let length = -pos.current.length() / 9.8;
         props.setGravity([pos.current.x / length, pos.current.y / length, pos.current.z / length]);
-
-        const trailMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-            const trailGeometry = new THREE.BufferGeometry();
-    
-            // 궤적을 그리기 위한 버퍼 속성을 생성합니다.
-            const positions = new Float32Array(100 * 3); // 100개의 포인트를 저장할 버퍼
-            trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    
-            // 궤적 라인을 생성합니다.
-            const trailLine = new THREE.Line(trailGeometry, trailMaterial);
-            trailLine.frustumCulled = false; // 시야 영역에 관계없이 항상 렌더링
-    
-            // 궤적 라인을 Ref에 할당합니다.
-            trailRef.current = trailLine;
-    
-            // 실제로 Three.js 객체를 렌더링하기 위해 scene에 추가합니다.
-            api.trail = trailLine;
     });
 
     return (
